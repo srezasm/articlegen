@@ -1,0 +1,8 @@
+openaiapikey: sk-
+exclude:
+  - torob.com
+  - basalam.com
+  - emalls.ir
+prompts:
+  webpage: "I want you to be my writing assistant. Given the following paragraphs, remove the unrelative sentences and write a product description in persian language\n\n"
+  combine: "I want you to be my writing assistant. Based on the following contents that are separated by "---", write an {} article in persian language"
