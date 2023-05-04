@@ -28,3 +28,4 @@ incomplete
 complete
 test.py
 __pycache__
+*.docx

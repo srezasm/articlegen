@@ -47,29 +47,6 @@ def get_exclutions():
             return list(conf['exclude'])
 
 
-def loading(msg=''):
-    msgs = [
-        'Bending the spoon...',
-        'Checking the gravitational constant in your locale...',
-        'Spinning the hamster...',
-        'Computing the secret to life...',
-        'Deporing mullahs...',
-        'Initializing the initializer...',
-        'Optimizing the optimizer...',
-        'Mining BTC...',
-        'Fixing the IRAN...',
-        'Downloading trojan virus...',
-        'Hacking the NASA...',
-        'Removing drive C:\\...',
-        'Downloading more RAM...',
-        'Collecting your browsing history...',
-        'Our premium plan is faster...'
-    ]
-    if not msg:
-        msg = msgs[random.randrange(0, len(msgs))]
-    cprint(msg, bcolors.OKGREEN, end='\r')
-
-
 def get_prompt(name: str, content: str) -> str:
     with open('configs.yml') as f:
         conf = yaml.safe_load(f)

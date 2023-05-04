@@ -2,8 +2,12 @@ from googlesearch import search
 import requests
 import justext
 import openai
+from urllib.parse import urlparse
 from utils import *
 from prompts import *
+import docx
+import datetime
+from os.path import join
 
 
 def main():
@@ -25,9 +29,7 @@ def main():
     openai.api_key = open_ai_key
 
     # Get search query
-    query = ''
-    while not query:
-        query = cinput('Please enter your search query: ', bcolors.OKBLUE)
+    query = cinput('Please enter your search query: ', bcolors.OKBLUE)
 
     # Exclude websites
     exclutions = get_exclutions()
@@ -42,52 +44,70 @@ def main():
         lang = 'en'
 
     # Google search
-    results = search(
-        query, sleep_interval=5,
-        num_results=10, lang=lang
-    )
-    results = [r for r in results]
+    try:
+        results = search(
+            query, sleep_interval=5,
+            num_results=10, lang=lang, advanced=True
+        )
+        urls = [result.url for result in results]
+    except Exception as e:
+        cprint(e, bcolors.FAIL)
+        exit()
 
-    cprint(f'Found {len(results)} results', bcolors.OKBLUE)
+    cprint(f'Found {len(urls)} results', bcolors.OKBLUE)
 
     # Extracting the main content of pages
     contents = []
-    for i, result in enumerate(results):
+    for i, url in enumerate(urls):
         cprint(f'Processing web page {i+1}', bcolors.OKGREEN, end='\r')
         try:
-            get_result = requests.get(result, timeout=5)
+            get_result = requests.get(url, timeout=5)
         except requests.exceptions.Timeout as to_exception:
             print()
             cprint(to_exception, bcolors.FAIL)
             continue
 
         main_c = justext.justext(
-            get_result.content, length_low=2, length_high=300,
+            get_result.content,
             stoplist=justext.get_stoplist(lang),
         )
 
+        page_content = []
         for pragraph in main_c:
-            page_content = []
             if pragraph.class_type != 'bad':
                 if pragraph.is_heading:
                     page_content.append(f'## {pragraph.text}')
                 else:
                     page_content.append(pragraph.text)
 
-        reseponse = openai.Completion.create(
-            model='gpt-3.5-turbo',
-            prompt=webpage_prompt('\n'.join(page_content)),
-            messages=[
-                {
-                    "name": "toyarticlegen",
-                    "role": "user",
-                    "content": webpage_prompt('\n'.join(page_content))
-                }
-            ],
-        )
+        if not page_content:
+            print()
+            cprint(
+                f'No useful content found in {urlparse(url).netloc}.', bcolors.WARNING)
+            continue
 
-        contents.extend(reseponse['choices'][0]['message']['content'])
+        try:
+            cprint(
+                f'Summarizing {i+1} web page into an article', bcolors.OKGREEN, end='\r')
 
+            reseponse = openai.ChatCompletion.create(
+                model='gpt-3.5-turbo',
+                messages=[
+                    {
+                        "role": "system",
+                        "content": webpage_prompt('\n'.join(page_content))
+                    }
+                ],
+                stop=None,
+                temperature=0.7
+            )
+
+            contents.append(reseponse.choices[0].message.content)
+        except Exception as e:
+            cprint(e, bcolors.FAIL)
+            exit()
+
+    # Combine articles
     print('Which style do you prefer?')
     styles = ['Normal', 'Storical', 'Creative', 'Review']
     for i, style in enumerate(styles):
@@ -95,13 +115,25 @@ def main():
     style = styles[int(input()) - 1]
     prompt = combine_prompt(style, '\n---\n'.join(contents))
 
-    # TODO: add questions and answers
+    cprint('Combining articles...', bcolors.OKGREEN, end='\r')
+    reseponse = openai.ChatCompletion.create(
+        model='gpt-3.5-turbo',
+        messages=[
+            {
+                "role": "system",
+                "content": prompt
+            }
+        ],
+        stop=None,
+        temperature=0.7
+    )
 
-    cprint('What\'s your desired content style?', bcolors.OKBLUE)
-    cprint('e.g. storical, scientific etc.', bcolors.OKBLUE)
-    cprint('Enter for normal cotent', bcolors.OKBLUE)
-    opt = input('Enter an option: ')
-    get_prompt('combine', '\n---\n'.join(contents))
+    doc = docx.Document()
+    doc.add_paragraph(reseponse.choices[0].message.content)
+    doc_name = join(
+        'docs', f'{datetime.datetime.now().strftime("%Y-%m-%d_%H-%M-%S")}.docx')
+    doc.save(doc_name)
+    cprint(f'Your article is ready in {doc_name}', bcolors.OKBLUE)
 
 
 if __name__ == '__main__':
