@@ -3,6 +3,7 @@ import requests
 import justext
 import openai
 from utils import *
+from prompts import *
 
 
 def main():
@@ -16,43 +17,24 @@ def main():
     # Check OpenAI API Key
     open_ai_key = get_open_ai_key()
     if not open_ai_key:
-        print(
+        cprint(
             'Please enter your OpenAI API key in the'
-            'configs.yml and restart the program'
+            ' configs.yml and restart the program', bcolors.FAIL
         )
         exit()
-
     openai.api_key = open_ai_key
-    reseponse = openai.Completion.create(
-        model='gpt-3.5-turbo',
-        prompt='I want you to be my writing assistant. write an short article about sunrise:\n'
-    )
-
 
     # Get search query
     query = ''
     while not query:
         query = cinput('Please enter your search query: ', bcolors.OKBLUE)
 
-    # # Get specific websites
-    # cprint('Enter websites or enter blank', bcolors.OKBLUE)
-    # while True:
-    #     domain = input()
-
-    #     if not domain:
-    #         break
-    #     if not is_valid_domain(domain):
-    #         cprint('Invalid website', bcolors.FAIL)
-    #         continue
-
-    #     query += f' site:{domain}'
-
     # Exclude websites
     exclutions = get_exclutions()
     for e in exclutions:
         query += f' -inurl:{e}'
 
-    loading()
+    cprint(f'Googling...', bcolors.OKGREEN, end='\r')
 
     # Detect query language
     lang = 'fa'
@@ -79,13 +61,9 @@ def main():
             cprint(to_exception, bcolors.FAIL)
             continue
 
-        sl = 'English'
-        if lang == 'fa':
-            sl = 'Persian'
-
         main_c = justext.justext(
             get_result.content, length_low=2, length_high=300,
-            stoplist=justext.get_stoplist(sl),
+            stoplist=justext.get_stoplist(lang),
         )
 
         for pragraph in main_c:
@@ -96,34 +74,28 @@ def main():
                 else:
                     page_content.append(pragraph.text)
 
-            reseponse = openai.Completion.create(
-                model='gpt-3.5-turbo',
-                prompt='I want you to be my writing assistant. Given the following paragraphs, remove the unrelative sentences and write a product description in persian language\n\n' + '\n'.join(page_content),
-                # prompt=get_prompt('webpage', '\n'.join(page_content)),
-                # TODO: check the arguments
-                # temperature=0.7,
-                # max_tokens=1000,
-                # top_p=1.0,
-                # frequency_penalty=0.0,
-                # presence_penalty=0.0
-            )
-            # TODO: check response
-            contents.extend(reseponse)
+        reseponse = openai.Completion.create(
+            model='gpt-3.5-turbo',
+            prompt=webpage_prompt('\n'.join(page_content)),
+            messages=[
+                {
+                    "name": "toyarticlegen",
+                    "role": "user",
+                    "content": webpage_prompt('\n'.join(page_content))
+                }
+            ],
+        )
 
-    # write a short article with given content.
-    # I want you to be my online shop content creator. Write a product description in
-    # persian language with the following content.
+        contents.extend(reseponse['choices'][0]['message']['content'])
 
-    # Given the following description about a product, I need you to list the benefits
-    # of the product in persian language
+    print('Which style do you prefer?')
+    styles = ['Normal', 'Storical', 'Creative', 'Review']
+    for i, style in enumerate(styles):
+        print(f'{i+1}. {style}')
+    style = styles[int(input()) - 1]
+    prompt = combine_prompt(style, '\n---\n'.join(contents))
 
-    # Given the following description about a product, I need you to write 3 questions
-    # about the product in persian language
-
-    # Given the following description about a product:
-    # [description]
-    # I need you to answer the following questions:
-    # [questions]
+    # TODO: add questions and answers
 
     cprint('What\'s your desired content style?', bcolors.OKBLUE)
     cprint('e.g. storical, scientific etc.', bcolors.OKBLUE)
