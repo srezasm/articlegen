@@ -3,6 +3,7 @@ import requests
 import justext
 import openai
 from urllib.parse import urlparse
+from urllib.error import HTTPError
 from utils import *
 from prompts import *
 import docx
@@ -45,11 +46,15 @@ def main():
 
     # Google search
     try:
-        results = search(
-            query, sleep_interval=5,
-            num_results=10, lang=lang, advanced=True
-        )
-        urls = [result.url for result in results]
+        results = search(query, lang=lang, num=10, start=0, stop=10)
+        urls = [result for result in results]
+    
+    except HTTPError as e:
+        if e.status == 429:
+            cprint(f'Please change your IP or wait.', bcolors.FAIL)
+        else:
+            cprint(e, bcolors.FAIL)
+        exit()
     except Exception as e:
         cprint(e, bcolors.FAIL)
         exit()
@@ -84,11 +89,12 @@ def main():
             print()
             cprint(
                 f'No useful content found in {urlparse(url).netloc}.', bcolors.WARNING)
+            cprint(f'You might want to consider adding {urlparse(url).netloc} to exclusions in config.yml', bcolors.BOLD)
             continue
 
         try:
             cprint(
-                f'Summarizing {i+1} web page into an article', bcolors.OKGREEN, end='\r')
+                f'Summarizing the web page {i+1} into an article', bcolors.OKGREEN, end='\r')
 
             reseponse = openai.ChatCompletion.create(
                 model='gpt-3.5-turbo',
@@ -103,6 +109,10 @@ def main():
             )
 
             contents.append(reseponse.choices[0].message.content)
+        except requests.ConnectionError as e:
+            cprint(e, bcolors.FAIL)
+            cprint("Turn on your VPN or Check your network connectivity")
+
         except Exception as e:
             cprint(e, bcolors.FAIL)
             exit()
@@ -116,18 +126,27 @@ def main():
     prompt = combine_prompt(style, '\n---\n'.join(contents))
 
     cprint('Combining articles...', bcolors.OKGREEN, end='\r')
-    reseponse = openai.ChatCompletion.create(
-        model='gpt-3.5-turbo',
-        messages=[
-            {
-                "role": "system",
-                "content": prompt
-            }
-        ],
-        stop=None,
-        temperature=0.7
-    )
+    try:
+        reseponse = openai.ChatCompletion.create(
+            model='gpt-3.5-turbo',
+            messages=[
+                {
+                    "role": "system",
+                    "content": prompt
+                }
+            ],
+            stop=None,
+            temperature=0.7
+        )
+    except requests.ConnectionError as e:
+        cprint(e, bcolors.FAIL)
+        cprint("Turn on your VPN or Check your network connectivity")
 
+    except Exception as e:
+        cprint(e, bcolors.FAIL)
+        exit()
+
+    # Write the final result into a doc file
     doc = docx.Document()
     doc.add_paragraph(reseponse.choices[0].message.content)
     doc_name = join(
