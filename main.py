@@ -71,6 +71,10 @@ def main():
             print()
             cprint(to_exception, bcolors.FAIL)
             continue
+        except Exception as e:
+            print()
+            cprint(e, bcolors.FAIL)
+            continue
 
         main_c = justext.justext(
             get_result.content,
