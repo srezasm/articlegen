@@ -4,12 +4,13 @@ import justext
 import openai
 from urllib.parse import urlparse
 from urllib.error import HTTPError
-from utils import *
 from prompts import *
+from cli import *
+from configs import get_open_ai_key
 import docx
 import datetime
 from os.path import join
-
+from webpages import get_pages
 
 def main():
     cprint('╭━━━╮ ╭╮    ╭╮     ╭━━━╮             ╭╮\n'
@@ -18,7 +19,7 @@ def main():
            '┃╰━╯┃╭┫┃┣┫╭━┫┃┃┃━┫ ┃┃╭━┫┃━┫╭╮┫┃━┫╭┫╭╮┃┃┃╭╮┃╭╯\n'
            '┃╭━╮┃┃┃╰┫┃╰━┫╰┫┃━┫ ┃╰┻ ┃┃━┫┃┃┃┃━┫┃┃╭╮┃╰┫╰╯┃┃\n'
            '╰╯ ╰┻╯╰━┻┻━━┻━┻━━╯ ╰━━━┻━━┻╯╰┻━━┻╯╰╯╰┻━┻━━┻╯\n', bcolors.HEADER)
-
+    
     # Check OpenAI API Key
     open_ai_key = get_open_ai_key()
     if not open_ai_key:
@@ -29,37 +30,9 @@ def main():
         exit()
     openai.api_key = open_ai_key
 
-    # Get search query
-    query = cinput('Please enter your search query: ', bcolors.OKBLUE)
+    # TODOget urls from pagehandler
+    urls = get_pages()
 
-    # Exclude websites
-    exclutions = get_exclutions()
-    for e in exclutions:
-        query += f' -inurl:{e}'
-
-    cprint(f'Googling...', bcolors.OKGREEN, end='\r')
-
-    # Detect query language
-    lang = 'fa'
-    if query[0] in list(map(chr, range(65, 91))) + list(map(chr, range(97, 123))):
-        lang = 'en'
-
-    # Google search
-    try:
-        results = search(query, lang=lang, num=10, start=0, stop=10)
-        urls = [result for result in results]
-    
-    except HTTPError as e:
-        if e.status == 429:
-            cprint(f'Please change your IP or wait.', bcolors.FAIL)
-        else:
-            cprint(e, bcolors.FAIL)
-        exit()
-    except Exception as e:
-        cprint(e, bcolors.FAIL)
-        exit()
-
-    cprint(f'Found {len(urls)} results', bcolors.OKBLUE)
 
     # Extracting the main content of pages
     contents = []
@@ -93,7 +66,8 @@ def main():
             print()
             cprint(
                 f'No useful content found in {urlparse(url).netloc}.', bcolors.WARNING)
-            cprint(f'You might want to consider adding {urlparse(url).netloc} to exclusions in config.yml', bcolors.BOLD)
+            cprint(
+                f'You might want to consider adding {urlparse(url).netloc} to exclusions in config.yml', bcolors.BOLD)
             continue
 
         try:
@@ -122,7 +96,7 @@ def main():
             exit()
 
     # Combine articles
-    print('Which style do you prefer?')
+    cprint('Which style do you prefer?', bcolors.OKBLUE)
     styles = ['Normal', 'Storical', 'Creative', 'Review']
     for i, style in enumerate(styles):
         print(f'{i+1}. {style}')
