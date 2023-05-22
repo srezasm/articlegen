@@ -1,14 +1,14 @@
 import justext
 import requests
 import openai
-from cli import *
-import configs
 import docx
 import datetime
-from os import path, listdir
+import os
 import joblib
 import hashlib
 from urllib.parse import urlparse
+import cli
+import configs
 
 
 def make_content(urls: list[str], lang: str):
@@ -17,16 +17,16 @@ def make_content(urls: list[str], lang: str):
         purl = urlparse(url)
         purl = f"{purl.netloc}/{purl.path.strip('/')}"
         hash = hashlib.sha256(purl.encode('utf-8')).hexdigest()
-        
+
         cfile_name = hash + '.joblib'
-        if cfile_name in listdir(configs.cache_path):
+        if cfile_name in os.listdir(configs.cache_path):
             contents.extend(joblib.load(
-                path.join(configs.cache_path, cfile_name)))
+                os.path.join(configs.cache_path, cfile_name)))
         else:
             content = justext_extract(url, lang)
             contents.extend(content)
-            joblib.dump(content, path.join(configs.cache_path, cfile_name))
-    
+            joblib.dump(content, os.path.join(configs.cache_path, cfile_name))
+
     contents = '\n'.join(contents)
     contents = ai_content_create(contents)
     write_doc(contents)
@@ -37,11 +37,12 @@ def justext_extract(url: str, lang: str) -> list[str]:
         get_result = requests.get(url, timeout=5)
 
     except requests.exceptions.Timeout:
-        cprint('Please check your internet connectivity.', bcolors.FAIL)
+        cli.cprint('Please check your internet connectivity.',
+                   cli.bcolors.FAIL)
         return None
 
     except Exception as e:
-        cprint(e, bcolors.FAIL)
+        cli.cprint(e, cli.bcolors.FAIL)
         return None
 
     main_c = justext.justext(
@@ -76,11 +77,11 @@ def ai_content_create(content: str, model: str = 'gpt-3.5-turbo') -> str:
         )
 
     except requests.ConnectionError as e:
-        cprint(e, bcolors.FAIL)
+        cli.cprint(e, cli.bcolors.FAIL)
         return None
 
     except Exception as e:
-        cprint(e, bcolors.FAIL)
+        cli.cprint(e, cli.bcolors.FAIL)
         return None
 
     return str(reseponse.choices[0].message.content)
@@ -89,7 +90,7 @@ def ai_content_create(content: str, model: str = 'gpt-3.5-turbo') -> str:
 def write_doc(content: str):
     doc = docx.Document()
     doc.add_paragraph(content)
-    doc_name = path.join(
+    doc_name = os.path.join(
         configs.docs_path, f'{datetime.datetime.now().strftime("%Y-%m-%d_%H-%M-%S")}.docx')
     doc.save(doc_name)
-    cprint(f'Your article is ready in {doc_name}', bcolors.OKBLUE)
+    cli.cprint(f'Your article is ready in {doc_name}', cli.bcolors.OKBLUE)

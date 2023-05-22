@@ -1,12 +1,12 @@
-from cli import *
-from configs import get_exclutions
+import cli
+import configs
+import validators
 from googlesearch import search
 from urllib.error import HTTPError
-import validators
 
 
 def get_pages():
-    choice = input_options(
+    choice = cli.input_options(
         'Google Search', 'Page URLS',
         question='How do you want to proceed?'
     )
@@ -24,14 +24,14 @@ def get_pages():
 
 def google_search():
     # Get search query
-    query = cinput('Please enter your search query: ', bcolors.OKBLUE)
+    query = cli.cinput('Please enter your search query: ', cli.bcolors.OKBLUE)
 
     # Exclude websites
-    exclutions = get_exclutions()
+    exclutions = configs.get_exclutions()
     for e in exclutions:
         query += f' -inurl:{e}'
 
-    cprint(f'Googling...', bcolors.OKGREEN, end='\r')
+    cli.cprint(f'Googling...', cli.bcolors.OKGREEN, end='\r')
 
     # Detect query language
     lang = 'fa'
@@ -45,15 +45,15 @@ def google_search():
 
     except HTTPError as e:
         if e.status == 429:
-            cprint(f'Please change your IP or wait.', bcolors.FAIL)
+            cli.cprint(f'Please change your IP or wait.', cli.bcolors.FAIL)
         else:
-            cprint(e, bcolors.FAIL)
+            cli.cprint(e, cli.bcolors.FAIL)
         exit()
     except Exception as e:
-        cprint(e, bcolors.FAIL)
+        cli.cprint(e, cli.bcolors.FAIL)
         exit()
 
-    cprint(f'Found {len(urls)} results', bcolors.OKBLUE)
+    cli.cprint(f'Found {len(urls)} results', cli.bcolors.OKBLUE)
 
     return urls
 
@@ -61,7 +61,7 @@ def input_urls():
     def url_validator(url):
         return True if validators.url(url) == True else False
 
-    urls = input_list(
+    urls = cli.input_list(
         'Please enter the URLs one per line.\n'
         'Simply press the \'Enter\' key without typing anything else to Finish.',
         stop='',

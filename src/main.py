@@ -3,14 +3,14 @@ import os
 import cli
 import content
 import configs
-from webpages import get_pages
+import webpages
 
 def main():
     while(True):
         cli.startup_message();
 
         # Collect urls
-        urls = get_pages()
+        urls = webpages.get_pages()
 
         lang = cli.input_options('en', 'fa', question='Please select your target language.')
         if lang == 1:
