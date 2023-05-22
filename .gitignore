@@ -29,3 +29,5 @@ complete
 test.py
 __pycache__
 *.docx
+cache
+docs
