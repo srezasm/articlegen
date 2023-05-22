@@ -62,6 +62,7 @@ def justext_extract(url: str, lang: str) -> list[str]:
 
 def ai_content_create(content: str, model: str = 'gpt-3.5-turbo') -> str:
     try:
+        content += 'Combine the following paragraphs into a descriptive and comprehensive article:\n\n'
         reseponse = openai.ChatCompletion.create(
             model=model,
             messages=[
