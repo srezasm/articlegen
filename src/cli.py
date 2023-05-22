@@ -1,3 +1,5 @@
+from typing import Callable
+
 
 class bcolors:
     HEADER = '\033[95m'
@@ -25,7 +27,16 @@ def cinput(msg: str, color: bcolors = None):
         return input(f'{color}{msg}{bcolors.ENDC}')
 
 
-def options_menue(*options, question: str = None, choice_msg: str = None):
+def startup_message():
+    cprint('╭━━━╮ ╭╮    ╭╮     ╭━━━╮             ╭╮\n'
+           '┃╭━╮┃╭╯╰╮   ┃┃     ┃╭━╮┃            ╭╯╰╮\n'
+           '┃┃ ┃┣┻╮╭╋┳━━┫┃╭━━╮ ┃┃ ╰╋━━┳━╮╭━━┳━┳━┻╮╭╋━━┳━╮\n'
+           '┃╰━╯┃╭┫┃┣┫╭━┫┃┃┃━┫ ┃┃╭━┫┃━┫╭╮┫┃━┫╭┫╭╮┃┃┃╭╮┃╭╯\n'
+           '┃╭━╮┃┃┃╰┫┃╰━┫╰┫┃━┫ ┃╰┻ ┃┃━┫┃┃┃┃━┫┃┃╭╮┃╰┫╰╯┃┃\n'
+           '╰╯ ╰┻╯╰━┻┻━━┻━┻━━╯ ╰━━━┻━━┻╯╰┻━━┻╯╰╯╰┻━┻━━┻╯\n', bcolors.HEADER)
+
+
+def input_options(*options, question: str = None, choice_msg: str = None):
     opt_len = len(options)
     cprint(f'Please select an option:', bcolors.OKBLUE) if not question else cprint(
         question, bcolors.OKBLUE)
@@ -44,7 +55,7 @@ def options_menue(*options, question: str = None, choice_msg: str = None):
     return int(choice)
 
 
-def get_list(msg: str, stop: str = '', empty: bool = False, validator = lambda x: True):
+def input_list(msg: str, stop: str = '', empty: bool = False, validator=Callable[[str], bool]):
     inputs = []
 
     cprint(msg, bcolors.OKBLUE)
@@ -57,11 +68,39 @@ def get_list(msg: str, stop: str = '', empty: bool = False, validator = lambda x
                 continue
             break
 
-        if validator and not validator(last_input):
-            cprint('The input is not valid. Try again.', bcolors.WARNING)
-            continue
+        if validator:
+            if not validator(last_input):
+                cprint('The input is not valid. Try again.', bcolors.WARNING)
+                continue
 
         inputs.append(last_input)
         i += 1
 
     return inputs
+
+
+def get_yes_no_answer(message: str, default: bool = True) -> bool:
+    # Define the prompt
+    prompt = f"{message} (y/n) "
+
+    # Add the default answer to the prompt if it's provided
+    if default:
+        prompt += "[Y/n] "
+    else:
+        prompt += "[y/N] "
+
+    # Ask the question and get the user's response
+    response = cinput(prompt, bcolors.OKBLUE)
+
+    # Determine the boolean value based on the user's response
+    if not response:
+        return default
+
+    elif response.lower() in ['y', 'yes']:
+        return True
+
+    elif response.lower() in ['n', 'no']:
+        return False
+
+    else:
+        cprint("Invalid response. Please enter 'y' or 'n'.", color=bcolors.WARNING)

@@ -6,27 +6,18 @@ import validators
 
 
 def get_pages():
-    choice = options_menue(
+    choice = input_options(
         'Google Search', 'Page URLS',
         question='How do you want to proceed?'
     )
-    
+
     urls = []
 
     if choice == 1:
         urls = google_search()
 
     elif choice == 2:
-        def url_validator(url):
-            return True if validators.url(url) == True else False
-
-        urls = get_list(
-            'Please enter the URLs one per line.\n'
-            'Simply press the \'Enter\' key without typing anything else to Finish.',
-            stop='',
-            empty=False,
-            validator=url_validator
-        )
+        urls = input_urls()
 
     return urls
 
@@ -63,5 +54,19 @@ def google_search():
         exit()
 
     cprint(f'Found {len(urls)} results', bcolors.OKBLUE)
+
+    return urls
+
+def input_urls():
+    def url_validator(url):
+        return True if validators.url(url) == True else False
+
+    urls = input_list(
+        'Please enter the URLs one per line.\n'
+        'Simply press the \'Enter\' key without typing anything else to Finish.',
+        stop='',
+        empty=False,
+        validator=url_validator
+    )
 
     return urls
